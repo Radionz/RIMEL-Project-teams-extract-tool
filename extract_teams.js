@@ -6,7 +6,7 @@ map,
 markers,
 geocoder;
 
-$( document ).ready(function() {
+$(document).ready(function() {
 
   initTable();
   initMap();
@@ -18,22 +18,27 @@ $( document ).ready(function() {
 });
 
 function initTable() {
-  // INIT Table
-  table = $('#dataTables-teams').DataTable({ responsive: true});
+  table = $('#dataTables-teams').DataTable({
+    responsive: true
+  });
   $(table.tables().containers()).hide();
   $("#table-loading").hide();
-}
+  $("#results").hide();
+};
 
 function initMap() {
   // INIT Map
   markers = [];
   map_options = {
-    center: {lat: 43.6155793, lng: 7.0696861},
+    center: {
+      lat: 43.6155793,
+      lng: 7.0696861
+    },
     zoom: 2
   };
   // map = new google.maps.Map($("#map"), map_options);
   geocoder = new google.maps.Geocoder();
-}
+};
 
 function extractDataFromTeam(source, teamLocations) {
   $("#results").hide();
@@ -48,10 +53,9 @@ function extractDataFromTeam(source, teamLocations) {
     for (var i = 0; i < markers.length; i++) {
       markers[i].setMap(null);
     }
-    $("#map").hide();
 
     $("#table-loading > p > span").text('0%');
-    $('.progress-bar').css('width', 0+'%').attr('aria-valuenow', 0);
+    $('.progress-bar').css('width', 0 + '%').attr('aria-valuenow', 0);
     $("#table-loading").show();
 
     var url = $('#input_url_extract_teams').val();
@@ -59,9 +63,8 @@ function extractDataFromTeam(source, teamLocations) {
       url = "http://spring.io/team.html";
     }
 
-    if(typeof map === undefined) {
-      map = new google.maps.Map($("#map"), map_options);
-    }
+    map = new google.maps.Map(document.getElementById('map'), map_options);
+
 
     members = [];
 
@@ -70,9 +73,10 @@ function extractDataFromTeam(source, teamLocations) {
     membersPositionsWords = [],
     membersLatLng = [];
     $members.filter('section').each(function(index, member) {
-      var $member = $(member);
+      var $member = $(member),
+      member = {},
+      rowNode = null;
 
-      var member = {};
       member.latitude = 'NA';
       member.longitude = 'NA';
       member.latLng = null;
@@ -83,10 +87,6 @@ function extractDataFromTeam(source, teamLocations) {
       member.name = $member.find('.team-member--name').text();
       member.position = $member.find('.team-member--position').text();
       member.location = $member.find('.team-member--location').text();
-
-      console.log(member);
-
-      var rowNode = null;
 
       // Find member's latitude & longitude
       $.each(teamLocations, function(i, teamLocation) {
@@ -113,27 +113,27 @@ function extractDataFromTeam(source, teamLocations) {
         member.name,
         member.position,
         member.location,
-        member.latitude + ' / ' + member.longitude + '<button type="button" class="btn btn-default btn-xs pull-right" id="marker_'+member.markerId+'">Show on map</button>',
-        '<a href="' + member.github + '">Github of ' + member.github.replace('https://github.com/','') + '</a>'
+        member.latitude + ' / ' + member.longitude + '<button type="button" class="btn btn-default btn-xs pull-right" id="marker_' + member.markerId + '">Show on map</button>',
+        '<a href="' + member.github + '">Github of ' + member.github.replace('https://github.com/', '') + '</a>'
       ]).draw().node();
 
-      $('button[id="marker_'+member.markerId+'"]').on('click', function() {
+      $('button[id="marker_' + member.markerId + '"]').on('click', function() {
         map.panTo(member.marker.getPosition());
       });
 
-      if (member.latitude == 'NA'||  member.longitude == 'NA') {
+      if (member.latitude == 'NA' || member.longitude == 'NA') {
         $(rowNode).addClass('warning');
       }
 
       member.memberPositionWords = member.position.split(' ');
-      Array.prototype.push.apply(membersPositionsWords,member.memberPositionWords);
+      Array.prototype.push.apply(membersPositionsWords, member.memberPositionWords);
 
       members.push(member);
 
       // Update progress bar
       var progress = Math.floor(((index + 1) / memberNb) * 100);
-      $("#table-loading > p > span").text(progress+'%');
-      $('#table-loading > .progress > .progress-bar').css('width', progress+'%').attr('aria-valuenow', progress);
+      $("#table-loading > p > span").text(progress + '%');
+      $('#table-loading > .progress > .progress-bar').css('width', progress + '%').attr('aria-valuenow', progress);
 
       if (progress >= 100) {
         $("#table-loading").hide();
@@ -142,7 +142,7 @@ function extractDataFromTeam(source, teamLocations) {
       }
     });
 
-    $.each(membersPositionsWords, function (i, val) {
+    $.each(membersPositionsWords, function(i, val) {
       membersPositionsWords[i] = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
     })
 
@@ -150,7 +150,7 @@ function extractDataFromTeam(source, teamLocations) {
     parseText($("#text").text());
 
     var membersPositionsWordsOccurencies = {};
-    $.each(membersPositionsWords, function (i, val) {
+    $.each(membersPositionsWords, function(i, val) {
       membersPositionsWordsOccurencies[val] = (membersPositionsWordsOccurencies[val] || 0) + 1;
     })
 
@@ -158,7 +158,7 @@ function extractDataFromTeam(source, teamLocations) {
     wordsOccurenciesMorris = []
     counter = 0,
     counterMorris = 0;
-    $.each(membersPositionsWordsOccurencies, function (word, count) {
+    $.each(membersPositionsWordsOccurencies, function(word, count) {
       wordsOccurencies[counter] = {}
       wordsOccurencies[counter].count = count;
       wordsOccurencies[counter].word = word;
@@ -178,23 +178,22 @@ function extractDataFromTeam(source, teamLocations) {
     });
 
     var countries = {};
+
     function getCountryFromLatLng(counterCountryFromLatLng) {
-      setTimeout(function () {
+      setTimeout(function() {
         if (counterCountryFromLatLng < membersLatLng.length) {
-          geocoder.geocode({'latLng': membersLatLng[counterCountryFromLatLng]}, function(results, status) {
+          geocoder.geocode({ 'latLng': membersLatLng[counterCountryFromLatLng] },
+           function(results, status) {
             if (status == google.maps.GeocoderStatus.OK) {
               if (results[1]) {
-                var indice=0;
-                for (var j=0; j<results.length; j++)
-                {
-                  if (results[j].types[0]=='locality')
-                  {
-                    indice=j;
+                var indice = 0;
+                for (var j = 0; j < results.length; j++) {
+                  if (results[j].types[0] == 'locality') {
+                    indice = j;
                     break;
                   }
                 }
-                for (var i=0; i<results[j].address_components.length; i++)
-                {
+                for (var i = 0; i < results[j].address_components.length; i++) {
                   if (results[j].address_components[i].types[0] == "locality") {
                     //this is the object you are looking for
                     city = results[j].address_components[i];
@@ -210,7 +209,7 @@ function extractDataFromTeam(source, teamLocations) {
                 }
 
                 //city data
-                console.log(city.long_name + " || " + region.long_name + " || " + country.short_name);
+                // console.log(city.long_name + " || " + region.long_name + " || " + country.short_name);
                 countries[country.long_name] = (countries[country.long_name] || 0) + 1;
               } else {
                 // console.log("No results found");
@@ -221,20 +220,20 @@ function extractDataFromTeam(source, teamLocations) {
             }
           });
 
-          console.log(countries);
+          // console.log(countries);
 
           counterCountryFromLatLng = counterCountryFromLatLng + 1;
 
           progress = Math.floor(((counterCountryFromLatLng) / membersLatLng.length) * 100);
-          $("#countries-loading > p > span").text(progress+'% ('+counterCountryFromLatLng+"/"+membersLatLng.length+")");
-          $('#countries-loading > .progress > .progress-bar').css('width', progress+'%').attr('aria-valuenow', progress);
+          $("#countries-loading > p > span").text(progress + '% (' + counterCountryFromLatLng + "/" + membersLatLng.length + ")");
+          $('#countries-loading > .progress > .progress-bar').css('width', progress + '%').attr('aria-valuenow', progress);
 
           getCountryFromLatLng(counterCountryFromLatLng);
-        }else{
+        } else {
 
           var countriesMorris = []
           counterMorris = 0;
-          $.each(countries, function (countryName, count) {
+          $.each(countries, function(countryName, count) {
             countriesMorris[counterMorris] = {}
             countriesMorris[counterMorris].value = count;
             countriesMorris[counterMorris].label = countryName;
@@ -254,7 +253,7 @@ function extractDataFromTeam(source, teamLocations) {
     }
 
     $("#countries-loading > p > span").text('0%');
-    $('.progress-bar').css('width', 0+'%').attr('aria-valuenow', 0);
+    $('.progress-bar').css('width', 0 + '%').attr('aria-valuenow', 0);
 
     getCountryFromLatLng(0);
     $("#donut-countries").hide();

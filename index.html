@@ -69,8 +69,8 @@
               </div>
               <!-- /input-group -->
             </li>
-            <li><a href="index.html"><i class="fa fa-dashboard fa-fw"></i> Spring teams</a></li>
-            <li><a href="compare.html"><i class="fa fa-dashboard fa-fw"></i> Compare teams</a></li>
+            <li><a href="index.html"><i class="fa fa-search fa-fw"></i> Extract team</a></li>
+            <li><a href="compare.html"><i class="fa fa-compress fa-fw"></i> Compare ideal & real team</a></li>
           </ul>
         </div>
         <!-- /.sidebar-collapse -->
@@ -102,21 +102,22 @@
       </div>
       <!-- /.row -->
 
-      <div class="row" id="results">
+      <div class="row" id="table-loading">
         <div class="col-lg-12">
-          <div id="table-loading">
-            <p>
-              <strong>Loading</strong>
-              <span class="pull-right text-muted">40%</span>
-            </p>
-            <div class="progress progress-striped active">
-              <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width: 40%">
-              </div>
+          <p>
+            <strong>Loading</strong>
+            <span class="pull-right text-muted">40%</span>
+          </p>
+          <div class="progress progress-striped active">
+            <div class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width: 40%">
             </div>
           </div>
         </div>
         <!-- /.col-lg-12 -->
-
+      </div>
+      <!-- /.row -->
+      
+      <div class="row" id="results">
         <div class="col-lg-6">
           <div class="panel panel-default">
             <div class="panel-heading">
