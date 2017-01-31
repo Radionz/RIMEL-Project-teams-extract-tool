@@ -4,7 +4,8 @@ members,
 map_options,
 map,
 markers,
-geocoder;
+geocoder,
+api_key = "AIzaSyAJNl6TNPHAbgGew5e2151cfKy8acokMXU";
 
 $(document).ready(function() {
 
@@ -64,8 +65,6 @@ function extractDataFromTeam(source, teamLocations) {
     }
 
     map = new google.maps.Map(document.getElementById('map'), map_options);
-
-
     members = [];
 
     var $members = $(source).filter('section'),
@@ -84,6 +83,7 @@ function extractDataFromTeam(source, teamLocations) {
       member.marker = null;
       member.memberId = $member.attr('data-member-id');
       member.github = $member.find('.team-member--social--icon.github-small').attr('href');
+      member.githubUsername = member.github.replace('https://github.com/', '');
       member.name = $member.find('.team-member--name').text();
       member.position = $member.find('.team-member--position').text();
       member.location = $member.find('.team-member--location').text();
@@ -142,9 +142,106 @@ function extractDataFromTeam(source, teamLocations) {
       }
     });
 
+    var springRepos = [],
+    springProjectsFound = [];
+    // GET ALL OFFICIALS SPRINGS REPOS
+    $.ajax({
+      type: 'GET',
+      url: 'https://api.github.com/orgs/spring-projects/repos',
+      beforeSend : function(xhr) {
+        var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
+        xhr.setRequestHeader("Authorization", "Basic " + credentials);
+      },
+      dataType: 'json',
+      async: false,
+      success: function(repos) {
+        springRepos = repos;
+      }
+    });
+
+    // For each members get their repo and check if it's spring-projects repo
+    $.each(members, function(i, member) {
+      $.ajax({
+        type: 'GET',
+        url: 'https://api.github.com/users/' + member.githubUsername + '/repos',
+        beforeSend : function(xhr) {
+          var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
+          xhr.setRequestHeader("Authorization", "Basic " + credentials);
+        },
+        dataType: 'json',
+        async: false,
+        success: function(repos) {
+          member.springProjects = [];
+          console.log((i + 1) + '/' + members.length);
+          $.each(repos, function(i, repo) {
+            $.each(springRepos, function(i, springRepo) {
+              if (repo.name == springRepo.name) {
+                member.springProjects.push(repo);
+                springProjectsFound.push(repo);
+                if (springProjectsFound) {
+                  
+                }
+                return;
+              }
+            });
+          });
+        }
+      });
+    });
+
+    // Get API request amount remaining
+    $.ajax({
+      type: 'GET',
+      url: 'https://api.github.com/rate_limit',
+      beforeSend : function(xhr) {
+        var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
+        xhr.setRequestHeader("Authorization", "Basic " + credentials);
+      },
+      dataType: 'json',
+      async: false,
+      success: function(res) {
+        console.log('API rate remaining: ' + res.rate.remaining);
+      }
+    });
+
+    // For each member get time zone, and time difference
+    $.each(members, function(i, member) {
+      if (member.springProjects.length > 0) {
+        console.log(member.name);
+        // var projectsString = "";
+        // $.each(member.springProjects, function(i, project) {
+        //   projectsString += project.name + '  --  ';
+        // });
+        // console.log(projectsString);
+        if ( member.latitude != "NA" && member.longitude != "NA") {
+          $.getJSON( "https://maps.googleapis.com/maps/api/timezone/json?location=" + member.latitude + ","  + member.longitude + "&timestamp=" + Math.floor(Date.now() / 1000) + "&language=fr&key="+api_key, function( offset ) {
+            var globalOffset = offset.rawOffset + offset.dstOffset;
+            // time diffrenece in hours (summer / winter time check)
+            member.timeDifference = globalOffset/3600;
+          });
+        }
+      }
+    });
+
+    // foreach spring-project found (at least one contributor)
+    $.each(springProjectsFound, function(i, springProjectFound) {
+
+    });
+
+    // $.ajax({
+    //   url: "https://api.github.com/user",
+    //   type: "GET",
+    //   beforeSend: function(xhr){xhr.setRequestHeader('Authorization', 'Basic Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2')},
+    //   success: function(repos) {
+    //     if (repo.name.startsWith("DOCTMUT13")) {
+    //       console.log(repo.name.replace("DOCTMUT13",""));
+    //     }
+    //   }
+    // });
+
     $.each(membersPositionsWords, function(i, val) {
       membersPositionsWords[i] = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
-    })
+    });
 
     $("#text").text(membersPositionsWords.join(" "));
     parseText($("#text").text());
@@ -183,7 +280,7 @@ function extractDataFromTeam(source, teamLocations) {
       setTimeout(function() {
         if (counterCountryFromLatLng < membersLatLng.length) {
           geocoder.geocode({ 'latLng': membersLatLng[counterCountryFromLatLng] },
-           function(results, status) {
+          function(results, status) {
             if (status == google.maps.GeocoderStatus.OK) {
               if (results[1]) {
                 var indice = 0;
