@@ -5,7 +5,7 @@ map_options,
 map,
 markers,
 geocoder,
-api_key = "AIzaSyAJNl6TNPHAbgGew5e2151cfKy8acokMXU";
+api_key = "AIzaSyByX0f8NoaJWxZZUpVbE8hFYjIPxQERk9Q";
 
 $(document).ready(function() {
 
@@ -219,6 +219,7 @@ function extractDataFromTeam(source, teamLocations) {
                   if (contributor.login == member.githubUsername) {
                     contributor.timeDifference = member.timeDifference;
                     contributor.name = member.name;
+                    contributor.location = member.location;
                     projectContributors.push(contributor);
                   }
                 });
@@ -294,7 +295,7 @@ function extractDataFromTeam(source, teamLocations) {
               if (typeof contributor.timeDifference !== 'undefined' ) {
                 timeDifferences.push(contributor.timeDifference);
               }
-              contributorsNames += "<li>" + contributor.name + " (UTC" + (contributor.timeDifference >= 0 ? "+" : "") + contributor.timeDifference + ")</li>";
+              contributorsNames += "<li>" + contributor.name + " | " + contributor.location + " (UTC" + (contributor.timeDifference >= 0 ? "+" : "") + contributor.timeDifference + ")</li>";
             });
             contributorsNames = contributorsNames.substring(0, contributorsNames.length - 2);
 
