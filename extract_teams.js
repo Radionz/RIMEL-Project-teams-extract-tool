@@ -294,7 +294,7 @@ function extractDataFromTeam(source, teamLocations) {
               if (typeof contributor.timeDifference !== 'undefined' ) {
                 timeDifferences.push(contributor.timeDifference);
               }
-              contributorsNames += contributor.name + " (UTC" + contributor.timeDifference + "), ";
+              contributorsNames += "<li>" + contributor.name + " (UTC" + (contributor.timeDifference >= 0 ? "+" : "") + contributor.timeDifference + ")</li>";
             });
             contributorsNames = contributorsNames.substring(0, contributorsNames.length - 2);
 
@@ -336,7 +336,7 @@ function extractDataFromTeam(source, teamLocations) {
             $( "#project-selected" ).html("");
             $( "#project-selected" ).append("<h3>"+springRepo.name+"</h3>");
             $( "#project-selected" ).append("<h4>Contributors (" + springRepo.contributors.length + "):</h4>");
-            $( "#project-selected" ).append("<p>" + contributorsNames + "</p>");
+            $( "#project-selected" ).append("<ul>" + contributorsNames + "</ul>");
 
             $( "#project-selected" ).append("<h4>Time diffrence between contributors:</h4>");
           }
