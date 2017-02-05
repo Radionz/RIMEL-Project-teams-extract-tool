@@ -142,103 +142,246 @@ function extractDataFromTeam(source, teamLocations) {
       }
     });
 
-    var springRepos = [],
-    springProjectsFound = [];
-    // GET ALL OFFICIALS SPRINGS REPOS
-    $.ajax({
-      type: 'GET',
-      url: 'https://api.github.com/orgs/spring-projects/repos',
-      beforeSend : function(xhr) {
-        var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
-        xhr.setRequestHeader("Authorization", "Basic " + credentials);
-      },
-      dataType: 'json',
-      async: false,
-      success: function(repos) {
-        springRepos = repos;
+    /*
+    #################################################
+    GET THE TIME ZONE OF EACH MEMBERS
+    #################################################
+    */
+    console.log("START : GET THE TIME ZONE OF EACH MEMBERS");
+
+    $("#projects-loading").show();
+    $("#projects").hide();
+
+    var promisesGetTimeZoneOfMembers = [];
+
+    $.each(members, function(i, member) {
+
+      if ( member.latitude != "NA" && member.longitude != "NA") {
+        var request = $.getJSON( "https://maps.googleapis.com/maps/api/timezone/json?location=" + member.latitude + ","  + member.longitude + "&timestamp=" + Math.floor(Date.now() / 1000) + "&language=fr&key="+api_key, function( offset ) {
+          var globalOffset = offset.rawOffset + offset.dstOffset;
+          // time diffrenece in hours (summer / winter time check)
+          member.timeDifference = globalOffset/3600;
+          //console.log("TIMEZONE: " + member.name  + " : " + member.timeDifference);
+        });
+
+        promisesGetTimeZoneOfMembers.push(request);
       }
+
     });
 
-    // For each members get their repo and check if it's spring-projects repo
-    $.each(members, function(i, member) {
+    $.when.apply(null, promisesGetTimeZoneOfMembers).done(function(){
+      console.log("END : GET THE TIME ZONE OF EACH MEMBERS");
+      getSpirngReposAndContributors();
+    });
+
+    /*
+    #################################################
+    GET ALL OFFICIALS SPRINGS REPOS AND CONTRIBUTORS
+    #################################################
+    */
+    function getSpirngReposAndContributors() {
+
+      console.log("START : GET ALL OFFICIALS SPRINGS REPOS AND CONTRIBUTORS");
+      var springRepos = [],
+      promisesGetSpirngReposAndContributors = [];
+
       $.ajax({
         type: 'GET',
-        url: 'https://api.github.com/users/' + member.githubUsername + '/repos',
+        url: 'https://api.github.com/orgs/spring-projects/repos',
+        beforeSend : function(xhr) {
+          var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
+          xhr.setRequestHeader("Authorization", "Basic " + credentials);
+        },
+        dataType: 'json',
+        success: function(repos) {
+          getContributorsFromSpringRepo(repos);
+        }
+      });
+
+      function getContributorsFromSpringRepo(repos) {
+
+        var promisesGetContributorsFromSpringRepo = [];
+
+        $.each(repos, function(i, repo) {
+
+          var request = $.ajax({
+            type: 'GET',
+            url: "https://api.github.com/repos/spring-projects/" + repo.name + "/contributors",
+            beforeSend : function(xhr) {
+              var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
+              xhr.setRequestHeader("Authorization", "Basic " + credentials);
+            },
+            dataType: 'json',
+            success: function(contributors) {
+              projectContributors = [];
+              $.each(contributors, function(i, contributor) {
+                $.each(members, function(i, member) {
+                  if (contributor.login == member.githubUsername) {
+                    contributor.timeDifference = member.timeDifference;
+                    contributor.name = member.name;
+                    projectContributors.push(contributor);
+                  }
+                });
+              });
+              repo.contributors = projectContributors;
+            }
+          });
+
+          promisesGetContributorsFromSpringRepo.push(request);
+
+        });
+
+        $.when.apply(null, promisesGetContributorsFromSpringRepo).done(function(){
+          console.log("END :  GET ALL OFFICIALS SPRINGS REPOS AND CONTRIBUTORS");
+          springRepos = repos;
+          getRequestAmountRemaining();
+          displaySpringProjects(springRepos);
+        });
+
+      };
+
+    };
+
+    /*
+    #################################################
+    GET GITHUB API REQUEST AMOUNT REMAINING
+    #################################################
+    */
+    function getRequestAmountRemaining() {
+
+      $.ajax({
+        type: 'GET',
+        url: 'https://api.github.com/rate_limit',
         beforeSend : function(xhr) {
           var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
           xhr.setRequestHeader("Authorization", "Basic " + credentials);
         },
         dataType: 'json',
         async: false,
-        success: function(repos) {
-          member.springProjects = [];
-          console.log((i + 1) + '/' + members.length);
-          $.each(repos, function(i, repo) {
-            $.each(springRepos, function(i, springRepo) {
-              if (repo.name == springRepo.name) {
-                member.springProjects.push(repo);
-                springProjectsFound.push(repo);
-                if (springProjectsFound) {
-                  
-                }
-                return;
-              }
-            });
-          });
+        success: function(res) {
+          console.log('API rate remaining: ' + res.rate.remaining);
         }
       });
-    });
 
-    // Get API request amount remaining
-    $.ajax({
-      type: 'GET',
-      url: 'https://api.github.com/rate_limit',
-      beforeSend : function(xhr) {
-        var credentials = btoa('Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2');
-        xhr.setRequestHeader("Authorization", "Basic " + credentials);
-      },
-      dataType: 'json',
-      async: false,
-      success: function(res) {
-        console.log('API rate remaining: ' + res.rate.remaining);
+    }
+
+    /*
+    #################################################
+    DISPLAY CHARTS
+    #################################################
+    */
+    function displaySpringProjects(springRepos) {
+
+      var githubProjectsMorris = [];
+
+      $.each(springRepos, function(i, springRepo) {
+        githubProject = {};
+        githubProject.value = springRepo.contributors.length;
+        githubProject.label = springRepo.name;
+        githubProjectsMorris.push(githubProject);
+
+        $("#projects-select").append( "<option value='" + springRepo.id + "'>" + springRepo.name + " (" + springRepo.contributors.length + ")</option>" );
+      });
+
+      $( "#projects-select" ).change(function () {
+        $.each(springRepos, function(i, springRepo) {
+          if (springRepo.id == $( "#projects-select option:selected" ).val()) {
+
+
+            var timeDifferences = [],
+            contributorsNames = "";
+            $.each(springRepo.contributors, function(i, contributor) {
+              if (typeof contributor.timeDifference !== 'undefined' ) {
+                timeDifferences.push(contributor.timeDifference);
+              }
+              contributorsNames += contributor.name + " (UTC" + contributor.timeDifference + "), ";
+            });
+            contributorsNames = contributorsNames.substring(0, contributorsNames.length - 2);
+
+            console.log("timeDifferences");
+            console.log(timeDifferences);
+
+            var sum = 0,
+            timeDifferenceAvg = 0;
+            for(var x = 0; x < timeDifferences.length; x ++){
+              sum += timeDifferences[x];
+            }
+
+            timeDifferenceAvg = sum / timeDifferences.length;
+            timeDifferenceStdDerivation = standardDeviation(timeDifferences);
+            timeDifferenceAvgLow = timeDifferenceAvg - timeDifferenceStdDerivation;
+            timeDifferenceAvgHigh =  timeDifferenceAvg + timeDifferenceStdDerivation;
+            timeDifferenceMin = Math.min.apply(null, timeDifferences);
+            timeDifferenceMax = Math.max.apply(null, timeDifferences);
+
+            console.log(timeDifferenceStdDerivation);
+            console.log(timeDifferenceMin, timeDifferenceAvgLow, timeDifferenceAvgHigh, timeDifferenceMax);
+
+            google.charts.load('current', { 'packages': ['corechart'] });
+            google.charts.setOnLoadCallback(drawChart);
+            function drawChart() {
+              var data = google.visualization.arrayToDataTable([
+                [springRepo.name, timeDifferenceMin, timeDifferenceAvgLow, timeDifferenceAvgHigh, timeDifferenceMax]
+              ], true);
+
+              var options = {
+                legend: 'none'
+              };
+
+              var chart = new google.visualization.CandlestickChart(document.getElementById('project-boxplot'));
+
+              chart.draw(data, options);
+            }
+
+            $( "#project-selected" ).html("");
+            $( "#project-selected" ).append("<h3>"+springRepo.name+"</h3>");
+            $( "#project-selected" ).append("<h4>Contributors (" + springRepo.contributors.length + "):</h4>");
+            $( "#project-selected" ).append("<p>" + contributorsNames + "</p>");
+
+            $( "#project-selected" ).append("<h4>Time diffrence between contributors:</h4>");
+          }
+        });
+      })
+
+      $("#projects-loading").hide();
+      $("#projects").show();
+
+      Morris.Donut({
+        element: 'donut-githubProjects',
+        data: githubProjectsMorris
+      });
+
+      function standardDeviation(values){
+        var avg = average(values);
+
+        var squareDiffs = values.map(function(value){
+          var diff = value - avg;
+          var sqrDiff = diff * diff;
+          return sqrDiff;
+        });
+
+        var avgSquareDiff = average(squareDiffs);
+
+        var stdDev = Math.sqrt(avgSquareDiff);
+        return stdDev;
       }
-    });
 
-    // For each member get time zone, and time difference
-    $.each(members, function(i, member) {
-      if (member.springProjects.length > 0) {
-        console.log(member.name);
-        // var projectsString = "";
-        // $.each(member.springProjects, function(i, project) {
-        //   projectsString += project.name + '  --  ';
-        // });
-        // console.log(projectsString);
-        if ( member.latitude != "NA" && member.longitude != "NA") {
-          $.getJSON( "https://maps.googleapis.com/maps/api/timezone/json?location=" + member.latitude + ","  + member.longitude + "&timestamp=" + Math.floor(Date.now() / 1000) + "&language=fr&key="+api_key, function( offset ) {
-            var globalOffset = offset.rawOffset + offset.dstOffset;
-            // time diffrenece in hours (summer / winter time check)
-            member.timeDifference = globalOffset/3600;
-          });
-        }
+      function average(data){
+        var sum = data.reduce(function(sum, value){
+          return sum + value;
+        }, 0);
+
+        var avg = sum / data.length;
+        return avg;
       }
-    });
 
-    // foreach spring-project found (at least one contributor)
-    $.each(springProjectsFound, function(i, springProjectFound) {
+    }
 
-    });
-
-    // $.ajax({
-    //   url: "https://api.github.com/user",
-    //   type: "GET",
-    //   beforeSend: function(xhr){xhr.setRequestHeader('Authorization', 'Basic Radionz:1bbcead9a5963402aca789b1df0238c73c4a4ec2')},
-    //   success: function(repos) {
-    //     if (repo.name.startsWith("DOCTMUT13")) {
-    //       console.log(repo.name.replace("DOCTMUT13",""));
-    //     }
-    //   }
-    // });
-
+    /*
+    #################################################
+    CLOUD OF WORDS
+    #################################################
+    */
     $.each(membersPositionsWords, function(i, val) {
       membersPositionsWords[i] = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
     });
