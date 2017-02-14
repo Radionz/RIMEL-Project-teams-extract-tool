@@ -220,6 +220,7 @@ function extractDataFromTeam(source, teamLocations) {
                     contributor.timeDifference = member.timeDifference;
                     contributor.name = member.name;
                     contributor.location = member.location;
+                    contributor.position = member.position;
                     projectContributors.push(contributor);
                   }
                 });
@@ -295,7 +296,7 @@ function extractDataFromTeam(source, teamLocations) {
               if (typeof contributor.timeDifference !== 'undefined' ) {
                 timeDifferences.push(contributor.timeDifference);
               }
-              contributorsNames += "<li>" + contributor.name + " | " + contributor.location + " (UTC" + (contributor.timeDifference >= 0 ? "+" : "") + contributor.timeDifference + ")</li>";
+              contributorsNames += "<li>" + contributor.name + "</li><ul><li>position: " + contributor.position + "</li><li>location :" + contributor.location + " (UTC" + (contributor.timeDifference >= 0 ? "+" : "") + contributor.timeDifference + ")</li></ul>";
             });
             contributorsNames = contributorsNames.substring(0, contributorsNames.length - 2);
 
